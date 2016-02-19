@@ -9,10 +9,10 @@ class Movie250Spider(scrapy.Spider):
     allowed_domains = ['douban.com']
     start_urls = ['http://movie.douban.com/top250/']
 
-    def parse(self, response):
+    def parse_page(self, response):
         for info in response.css('.item'):
             item = Movie250Item()  # 这句不是很懂
-            item['rank'] = info.css(' em::text').extract()  # extract提出来的是列表
+            item['rank'] = info.css('em::text').extract()  # extract提出来的是列表
             item['title'] = info.css('.pic a img::attr(alt)').extract()
             item['link'] = info.css(' .pic a::attr(href)').extract()
             item['rate'] = info.css('.star .rating_num::text').extract()
@@ -28,4 +28,23 @@ class Movie250Spider(scrapy.Spider):
                 yield scrapy.Request(url, self.parse)  # 处理后续页面的url,一页一页处理，一边处理一边放入itempipeline中
 
     # 继续写个回调函数处理每个电影的信息
+    def parse_movie(self, response):
+        for year in response.css('#content h1 .year::text'):
+            item = Movie250Item()
+            item['year'] = year.extract()
+            yield item
+        for info in response.css('#info'): # info这个模块里不好抓年份
+            item = Movie250Item()
+            item['director'] = info.css('.attrs:eq(0)::text').extract()
+            item['classification'] = info.css("#info span[property = 'v:genre']::text").extract()
+            item['country'] = info.css('.pl:eq(4)::text').extract()
+            item['maincharacter'] = info.css("#info .attrs:eq(2) a::text").extract()
+            yield item
+        for content in response.css('#link-report .all.hidden::text'):
+            item = Movie250Item()
+            item['maincontent'] = content.extract()
+            yield item
+
+
+
 
